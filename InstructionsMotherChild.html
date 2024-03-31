@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en_US">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8"> 
+    <title>CSC 407: Computer Systems II: 2024 Winter, Assignment #2</title>
+    <style>
+     h2 { text-align: center; }
+    </style>
+  </head>
+
+  <body>
+    <h2>CSC 407: Computer Systems II: 2024 Winter<br/>Assignment #2</h2>
+    <p>Last Modified 2024 February 7</p>
+
+    <h4>Purpose:</h4>
+    To go over:
+    <ul>
+      <li>Processes</li>
+      <li>fork() and execl()</li>
+      <li>Signals</li>
+    </ul>
+
+    <h3>Computing</h3>
+    <p>
+      Please <a href="http://www.putty.org/">ssh</a> into
+      cdmlsrvprd01.dpu.depaul.edu or use your own Unix machine.
+    </p>
+
+    <h3>Description</h3>
+    <p>
+      The mother of two children was going yardwork
+      while wearing a decorative pin in her hair.
+      Unfortunately, she lost her pin in a pile of grass.
+      She wants to motivate her children to find the pin:
+      $20 to whomever finds it first!
+    </p>
+
+    <h3>Sample output:</h3>
+    <p>
+      <pre>$ <strong>./mother2 </strong>
+Mother: &quot;I will give $20 to whomever finds my decorative pin in the pile of grass.  Go!&quot;
+Catherine 13379: &quot;It smells nice, but no pin yet.&quot;
+Gerald 13380: &quot;Ouch!  I got pricked by a . . . Hey, look at what I found!&quot;
+Mother: &quot;Thank you Gerald for finding my pin, here is $20.&quot;
+Catherine 13379: &quot;It's just grass, not pin yet.&quot;
+Catherine 13379: &quot;That wasn't fair!  I was just getting started!&quot;
+Gerald 13380: &quot;Yay!  I win!  $20 is all mine!&quot;
+<strong>$ ./mother2 </strong>
+Mother: &quot;I will give $20 to whomever finds my decorative pin in the pile of grass.  Go!&quot;
+Betty 14527: &quot;Mom, have you thought of using a magnet?&quot;
+Gerald 14528: &quot;It's just grass, not pin yet.&quot;
+Betty 14527: &quot;Mom, have you thought of using a magnet?&quot;
+Gerald 14528: &quot;It smells nice, but no pin yet.&quot;
+Gerald 14528: &quot;Mom, have you thought of using a magnet?&quot;
+Betty 14527: &quot;It smells nice, but no pin yet.&quot;
+Gerald 14528: &quot;It smells nice, but no pin yet.&quot;
+Betty 14527: &quot;It smells nice, but no pin yet.&quot;
+Gerald 14528: &quot;It's just grass, not pin yet.&quot;
+Betty 14527: &quot;It's just grass, not pin yet.&quot;
+Gerald 14528: &quot;Mom, have you thought of using a magnet?&quot;
+Betty 14527: &quot;Ouch!  I got pricked by a . . . Hey, look at what I found!&quot;
+Mother: &quot;Thank you Betty for finding my pin, here is $20.&quot;
+Betty 14527: &quot;Yay!  I win!  $20 is all mine!&quot;
+Gerald 14528: &quot;It's just grass, not pin yet.&quot;
+Gerald 14528: &quot;Achoo!  I'm itchy and my allergies are acting up.&quot;
+<strong>$ ./mother2 </strong>
+Mother: &quot;I will give $20 to whomever finds my decorative pin in the pile of grass.  Go!&quot;
+Anna 14827: &quot;Mom, have you thought of using a magnet?&quot;
+Gerald 14828: &quot;Mom, have you thought of using a magnet?&quot;
+Anna 14827: &quot;Ouch!  I got pricked by a . . . Hey, look at what I found!&quot;
+Gerald 14828: &quot;Ouch!  I got pricked by a . . . Hey, look at what I found!&quot;
+Mother: &quot;Thank you Anna for finding my pin, here is $20.&quot;
+Anna 14827: &quot;Yay!  I win!  $20 is all mine!&quot;
+Gerald 14828: &quot;Yay!  I win!  $20 is all mine!&quot;
+<strong>$ ./mother2 </strong>
+Mother: &quot;I will give $20 to whomever finds my decorative pin in the pile of grass.  Go!&quot;
+Betty 14930: &quot;It's just grass, not pin yet.&quot;
+Fred 14931: &quot;It's just grass, not pin yet.&quot;
+Betty 14930: &quot;Mom, have you thought of using a magnet?&quot;
+Fred 14931: &quot;Mom, have you thought of using a magnet?&quot;
+Betty 14930: &quot;Mom, have you thought of using a magnet?&quot;
+Fred 14931: &quot;It's just grass, not pin yet.&quot;
+Betty 14930: &quot;Ouch!  I got pricked by a . . . Hey, look at what I found!&quot;
+Mother: &quot;Thank you Betty for finding my pin, here is $20.&quot;
+Fred 14931: &quot;It smells nice, but no pin yet.&quot;
+Betty 14930: &quot;Yay!  I win!  $20 is all mine!&quot;
+Fred 14931: &quot;It smells nice, but no pin yet.&quot;
+Fred 14931: &quot;Achoo!  I'm itchy and my allergies are acting up.&quot;
+</pre>
+    </p>
+
+    <h3>Protocol:</h3>
+    <p>
+      There are 2 programs (<code>mother.c</code> and <code>child.c</code>)
+      that run 3 processes (1 <code>mother</code>, 2 <code>child</code>ren).
+    </p>
+
+    <p>
+      <code>mother.c</code> installs a <code>SIGUSR1</code> signal handler,
+      and <code>fork()</code>s and <code>execl()</code>s both child processes.
+      She then hangs out.
+    </p>
+
+    <p>
+      The <code>child</code> processes installs a <code>SIGTERM</code>
+      signal handler,
+      and look for the pin.
+    </P>
+
+    <p>
+      When a <code>child</code> finds it, the child sends <code>SIGUSR1</code>
+      to its parent (the mother process).
+    </p>
+
+    <p>
+      When the mother receives <code>SIGUSR1</code>,
+      it sends <code>SIGTERM</code> to all of its children,
+      causing them to stop.
+    </p>
+
+    <p>
+      The mother then <code>wait()</code>s for both children,
+      and quits herself.
+    </p>
+   
+    <p>
+      <pre>
+Mother
+   |
+   |fork()/execl() child0
+   |----------------&gt;|
+   |                 |
+   |fork()/execl()   |         child1
+   |-----------------|-----------&gt;|
+   |                 |            |
+   |                 |            |
+   |                 |            |
+   |                 |            |
+   |             (searching)  (searching)
+   |                 |            |
+   |                 |            |
+   |         SIGUSR1 |            |
+   |&lt;----------------|            |
+   |                 |            |
+   | SIGTERM         |            |
+   |----------------&gt;|            |
+   |                 |            |
+   | SIGTERM         |            |
+   |-----------------|-----------&gt;|
+   |                 |            |
+   |              (stops)      (stops)  
+   |
+(stops)
+      </pre>
+    </p>
+
+    <h3>Assignment:</h3>
+    <ol type="1">
+      <li>
+	<h4>mother.c</h4>
+	<ol type="a">
+	  <li>
+	    Start with this code:
+	    <pre>
+#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+#include &lt;signal.h&gt;
+#include &lt;unistd.h&gt;
+
+const char*	FEMALE_NAME_ARRAY[]
+				= {"Anna",
+				   &quot;Betty&quot;,
+				   &quot;Catherine&quot;,
+				   &quot;Dorothy&quot;
+				  };
+
+const char*	MALE_NAME_ARRAY[]
+				= {&quot;Eric&quot;,
+				   &quot;Fred&quot;,
+				   &quot;Gerald&quot;,
+				   &quot;Hal&quot;
+				  };
+
+const int	NUM_CHILDREN	= 2;
+
+const char*	childNameArrayCPtr[NUM_CHILDREN];
+pid_t		childIdArray[NUM_CHILDREN];
+</pre>
+	    You may change the names,
+	    <strong>but please keep both arrays the same length!</strong>
+	  </li>
+	  <p/>
+
+	  <li>
+	    <code>main()</code> should do the following:
+	    <ol type="1">
+	      <li>
+		<code>srand(getpid());</code><br/>
+		This resets the random number generator
+		so that the program does not behave exactly the same each time.
+	      </li>
+	      <p/>
+
+	      <li>
+		Install an <em>advanced</em> handler to be called
+		when <code>SIGUSR1</code> is received.
+		What will it do?
+		Keep reading!
+	      </li>
+	      <p/>
+
+	      <li>
+		<pre>
+  printf(&quot;Mother: \&quot;I will give $20 to whomever finds my &quot;
+	 &quot;decorative pin in the pile of grass.  Go!\&quot;\n&quot;);
+		</pre>
+	      </li>
+	      <p/>
+
+	      <li>
+		<p>
+		  <code>NUM_CHILDREN</code> times,
+		  make a child process.
+		  Put the process id of the child in array
+		  <code>childIdArray[]</code>.
+		</p>
+		<p>
+		  The child process should run the program named
+		  <code>&quot;./child&quot;</code>.
+		  In addition to giving the program name twice,
+		  pass the name of the child.
+		  Assuming <code>int i</code> is the loop variable
+		  telling which child to make,
+		  then one way to randomly choose the name of a child is
+		  with:
+		  <pre>
+  const char**	nameArray;
+
+  nameArray	= (i == 0) ? FEMALE_NAME_ARRAY : MALE_NAME_ARRAY;
+  childNameArrayCPtr[i]
+		= nameArray[ rand() %
+			     (sizeof(FEMALE_NAME_ARRAY) / sizeof(const char*))
+			   ];</pre>
+	      </li>
+	      <p/>
+
+	      <li>
+		After making her children, the mother process just hangs out:
+		<pre>
+  while (/* some condition */)
+    sleep(1);
+		</pre>
+		What should <strong>/* some condition */</strong> be?
+		Well, you want the loop to stop
+		after the process receives <code>SIGUSR1</code>.
+		Therefore, what should your <code>SIGUSR1</code> handler do?
+	      </li>
+	      <p/>
+
+	      <li>
+		After finishing the loop,
+		have the mother process send <code>SIGTERM</code>
+		to all of her child processes.
+	        Have your parent to a <code>wait()</code> for each child.
+	      </li>
+	      <p/>
+
+	      <li>
+		Finish with <code>return(EXIT_SUCCESS);</code>
+	      </li>
+	    </ol>
+	  </li>
+	  <p/>
+
+	  <li>
+	    <p>
+	      Your advanced <code>SIGUSR1</code> handler should:
+	      <ol type="1">
+		<li>Use the process id of who sent the signal to determine the name of the child who sent the signal (call it <code>const char* nameCPtr</code>)</li>
+		<li>Do this: <code>printf(&quot;Mother: \&quot;Thank you %s for finding my pin, here is $20.\&quot;\n&quot;,nameCPtr);</code></li>
+	      </ol>
+	    </p>
+
+	    <p>
+	      It should also change the program so it gets out of the
+	      <code>while</code> loop in <code>main()</code>.
+	      <em>What type of variable might be useful for that?</em>
+	    </p>
+	  </li>
+	</ol>
+      </li>
+      <p/>
+
+      <li>
+	<h4>child.c</h4>
+	<ol type="a">
+	  <li>
+	    <code>main()</code> should verify that the child has been given
+	    its name on the command line.
+	    (It should be <code>argv[1]</code>)
+	  </li>
+	  <p/>
+
+	  <li>
+	    <p>
+	      It should install a <code>SIGTERM</code> handler.
+	    </p>
+	    <p>
+	      What should it do?
+	      Make the program end both <code>while()</code> loops.
+	    </p>
+	  </li>
+	  <p/>
+
+	  <li>
+	    <code>srand(getpid());</code><br/>
+	    This resets the random number generator
+	    so that the program does not behave exactly the same each time.
+	  </li>
+	  <p/>
+
+	  <li>
+	    It should have a loop like:
+	    <pre>int	numAttempts	= 0;
+int	haveFoundPin	= 0;
+
+while  ( /* some condition */ &amp;&amp; !haveFoundPin )
+{
+  sleep(1);
+
+  numAttempts++;
+
+  switch  (rand() % 4)
+  {
+  case 0 :
+    //  print some message
+    break;
+  case 1 :
+    //  print some message
+    break;
+  case 2 :
+    //  print some message
+    break;
+  case 3 :
+    //  print some message
+    //  Send SIGUSR1 to parent
+    haveFoundPin	= 1;
+    break;
+  }
+}
+	    </pre>
+	    For each case make it print some message.
+	    The message should be disappointing for cases 0, 1 and 2.
+	    However, for case 3, it should:
+	    <ul>
+	      <li>Print a message of pleasant surprise</li>
+	      <li>Send <code>SIGUSR1</code> to its parent</li>
+	      <li>Set <code>haveFoundPin = 1</code></li>
+	    </ul>
+	  </li>
+	  <p/>
+
+	  <li>
+	    After making her children, the mother process just hangs out:
+		<pre>
+  while (/* some condition */)
+    sleep(1);</pre>
+	    What should <code>/* some condition */</code> be?
+	    Well, you want the loop to stop
+	    after the process receives <code>SIGTERM</code>.
+	    Therefore, what should your <code>SIGTERM</code> handler do?
+	  </li>
+	  <p/>
+
+	  <li>
+	    <pre>
+  if  (haveFoundPin)
+  {
+    printf(&quot;%s %d: \&quot;Yay!  I win!  $20 is all mine!\&quot;\n&quot;,nameCPtr,getpid());
+  }
+  else
+  {
+    // Child did not find pin
+  }
+	    </pre>
+	    If the child did <em>not</em> find the pin
+	    then it should print a message of disappointment.
+	    Better still,
+	    make it print different messages
+	    based upon the value of <code>numAttempts</code>.
+	  </li>
+	  <p/>
+
+	  <li>
+	    Finish with <code>return(EXIT_SUCCESS);</code>
+	  </li>
+	  <p/>
+
+	</ol>
+      </li>
+      <p/>
+
+    </ol>
+  </body>
+</html>
